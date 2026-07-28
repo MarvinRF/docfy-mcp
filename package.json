@@ -1,0 +1,31 @@
+{
+  "name": "docfy-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "MCP server exposing a nestjs-docfy-documented OpenAPI catalog as tools for coding agents",
+  "bin": {
+    "docfy-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/cli.js",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "docfy-core": "file:../docfy-core",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.16.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.9"
+  }
+}
