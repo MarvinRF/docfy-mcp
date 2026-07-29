@@ -32,6 +32,17 @@ npx docfy-mcp --url http://localhost:3000/docs-json
 > padrão (proteção SSRF), o que quebraria o caso de uso mais comum daqui:
 > apontar pro dev server NestJS local.
 
+O path do JSON não é convenção fixa — depende do que o projeto passou pra
+`SwaggerModule.setup()` (`/api-json`, `/docs-json`, `/swagger-json`...). Se
+`--url` der 404, o `docfy-mcp` sonda os paths mais comuns na mesma origem e
+sugere qualquer um que pareça um documento OpenAPI de verdade.
+
+Pra specs atrás de auth, repita `--header` quantas vezes precisar:
+
+```bash
+npx docfy-mcp --url https://api.exemplo.com/api-json --header "Authorization: Bearer xyz"
+```
+
 Pra desenvolver neste repo: `npm install && npm run build`, depois
 `node dist/cli.js --spec/--url ...` (ou `npm run dev` via `tsx`).
 
