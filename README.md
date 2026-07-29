@@ -14,21 +14,16 @@ navegador.
   formato "Copy for AI" (Purpose, Request, Parameters, Validation, Success
   Response, Error Responses).
 
-## Instalação
-
-```bash
-npm install
-npm run build
-```
-
 ## Uso
+
+Publicado no npm — não precisa clonar nem buildar:
 
 ```bash
 # a partir de um arquivo estático
-node dist/cli.js --spec ./openapi.json
+npx docfy-mcp --spec ./openapi.json
 
 # a partir de um servidor NestJS rodando localmente
-node dist/cli.js --url http://localhost:3000/docs-json
+npx docfy-mcp --url http://localhost:3000/docs-json
 ```
 
 > `--url` faz o fetch da spec diretamente (não delega ao resolver HTTP do
@@ -36,6 +31,9 @@ node dist/cli.js --url http://localhost:3000/docs-json
 > `safeUrlResolver` do swagger-parser bloqueia URLs locais/privadas por
 > padrão (proteção SSRF), o que quebraria o caso de uso mais comum daqui:
 > apontar pro dev server NestJS local.
+
+Pra desenvolver neste repo: `npm install && npm run build`, depois
+`node dist/cli.js --spec/--url ...` (ou `npm run dev` via `tsx`).
 
 ## Registrar como MCP server local (Claude Code / Cursor)
 
@@ -45,8 +43,8 @@ Adicione um `.mcp.json` na raiz do projeto onde o client MCP vai rodar:
 {
   "mcpServers": {
     "docfy": {
-      "command": "node",
-      "args": ["/caminho/absoluto/para/docfy-mcp/dist/cli.js", "--url", "http://localhost:3000/docs-json"]
+      "command": "npx",
+      "args": ["-y", "docfy-mcp", "--url", "http://localhost:3000/docs-json"]
     }
   }
 }
@@ -58,5 +56,5 @@ aparecer na lista de tools disponíveis.
 ## Escopo do fim de semana
 
 Fora do escopo por ora (ver `docfy-mcp-planejamento.md` na raiz do
-container): publish no npm, CI/lint completo, transporte HTTP/SSE,
-`search_endpoints` (busca semântica), autenticação/spec atrás de login.
+container): CI/lint completo, transporte HTTP/SSE, `search_endpoints`
+(busca semântica), autenticação/spec atrás de login.
