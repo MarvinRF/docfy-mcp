@@ -3,18 +3,19 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { loadSpec } from './load-spec.js';
 import { createServer } from './server.js';
 
-function parseArgs(argv: string[]): { specPath?: string; specUrl?: string } {
-  const result: { specPath?: string; specUrl?: string } = {};
+function parseArgs(argv: string[]): { specPath?: string; specUrl?: string; headers: string[] } {
+  const result: { specPath?: string; specUrl?: string; headers: string[] } = { headers: [] };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--spec') result.specPath = argv[++i];
     else if (argv[i] === '--url') result.specUrl = argv[++i];
+    else if (argv[i] === '--header') result.headers.push(argv[++i]);
   }
   return result;
 }
 
 async function main(): Promise<void> {
-  const { specPath, specUrl } = parseArgs(process.argv.slice(2));
-  const document = await loadSpec({ specPath, specUrl });
+  const { specPath, specUrl, headers } = parseArgs(process.argv.slice(2));
+  const document = await loadSpec({ specPath, specUrl, headers });
   const server = createServer(document);
   await server.connect(new StdioServerTransport());
 }
