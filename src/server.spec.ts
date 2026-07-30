@@ -6,16 +6,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { normalizeDocument, type DocumentModel } from 'docfy-core';
 import { createServer } from './server';
 
-const fixture = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  'docfy-core',
-  'src',
-  '__tests__',
-  'fixtures',
-  'spec-3.0.json',
-);
+const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), '__tests__', 'fixtures', 'spec-3.0.json');
 
 async function connectedClient(document: DocumentModel): Promise<Client> {
   const server = createServer(document);
