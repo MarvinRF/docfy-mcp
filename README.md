@@ -1,54 +1,63 @@
 # docfy-mcp
 
-Servidor MCP (stdio) que expõe um catálogo OpenAPI — de preferência um já
-documentado com [`nestjs-docfy`](../nest-docfy), mas funciona com qualquer
-spec OpenAPI 3.0/3.1 válida — como tools pra agentes de código (Claude Code,
-Cursor etc.) consultarem durante a implementação de um client, sem abrir o
-navegador.
+An MCP (stdio) server that exposes an OpenAPI catalog as tools for coding
+agents (Claude Code, Cursor, etc.) to query while implementing a client —
+without leaving the editor to open a browser.
+
+Works best with a catalog already documented via [`nestjs-docfy`](../nest-docfy),
+but accepts any valid OpenAPI 3.0/3.1 spec.
 
 ## Tools
 
-- **`list_endpoints`** — lista todos os endpoints (method + path + summary).
-  Aceita `filter` opcional (substring case-insensitive em path/summary/tags).
-- **`get_endpoint`** — recebe `method` + `path`, devolve o texto completo no
-  formato "Copy for AI" (Purpose, Request, Parameters, Validation, Success
-  Response, Error Responses).
+- **`list_endpoints`** — lists all endpoints (method + path + summary).
+  Accepts an optional `filter` (case-insensitive substring match on
+  path/summary/tags).
+- **`get_endpoint`** — takes `method` + `path`, returns the full "Copy for
+  AI" text block (Purpose, Request, Parameters, Validation, Success Response,
+  Error Responses).
 
-## Uso
+## Usage
 
-Publicado no npm — não precisa clonar nem buildar:
+Published on npm — no need to clone or build:
 
 ```bash
-# a partir de um arquivo estático
+# from a static file
 npx docfy-mcp --spec ./openapi.json
 
-# a partir de um servidor NestJS rodando localmente
+# from a NestJS server running locally
 npx docfy-mcp --url http://localhost:3000/docs-json
 ```
 
-> `--url` faz o fetch da spec diretamente (não delega ao resolver HTTP do
-> swagger-parser), justamente para funcionar contra `localhost` — o
-> `safeUrlResolver` do swagger-parser bloqueia URLs locais/privadas por
-> padrão (proteção SSRF), o que quebraria o caso de uso mais comum daqui:
-> apontar pro dev server NestJS local.
+The JSON path isn't a fixed convention — it depends on what the project
+passed to `SwaggerModule.setup()` (`/api-json`, `/docs-json`,
+`/swagger-json`, ...). If `--url` returns 404, `docfy-mcp` probes the most
+common paths on the same origin and suggests any that looks like a real
+OpenAPI document.
 
-O path do JSON não é convenção fixa — depende do que o projeto passou pra
-`SwaggerModule.setup()` (`/api-json`, `/docs-json`, `/swagger-json`...). Se
-`--url` der 404, o `docfy-mcp` sonda os paths mais comuns na mesma origem e
-sugere qualquer um que pareça um documento OpenAPI de verdade.
-
-Pra specs atrás de auth, repita `--header` quantas vezes precisar:
+For specs behind auth, repeat `--header` as many times as needed:
 
 ```bash
-npx docfy-mcp --url https://api.exemplo.com/api-json --header "Authorization: Bearer xyz"
+npx docfy-mcp --url https://api.example.com/api-json --header "Authorization: Bearer xyz"
 ```
 
-Pra desenvolver neste repo: `npm install && npm run build`, depois
-`node dist/cli.js --spec/--url ...` (ou `npm run dev` via `tsx`).
+> **Why `--url` doesn't use swagger-parser's HTTP resolver:** `--url` fetches
+> the spec directly instead of delegating to swagger-parser's resolver. By
+> default, swagger-parser's `safeUrlResolver` blocks local/private URLs as an
+> SSRF protection — which would break the most common use case here:
+> pointing at a local NestJS dev server.
 
-## Registrar como MCP server local (Claude Code / Cursor)
+### Local development
 
-Adicione um `.mcp.json` na raiz do projeto onde o client MCP vai rodar:
+```bash
+npm install && npm run build
+node dist/cli.js --spec/--url ...
+# or, via tsx:
+npm run dev
+```
+
+## Registering as a local MCP server (Claude Code / Cursor)
+
+Add a `.mcp.json` at the root of the project where the MCP client will run:
 
 ```json
 {
@@ -61,11 +70,5 @@ Adicione um `.mcp.json` na raiz do projeto onde o client MCP vai rodar:
 }
 ```
 
-Reinicie o client MCP; as tools `list_endpoints` e `get_endpoint` devem
-aparecer na lista de tools disponíveis.
-
-## Escopo do fim de semana
-
-Fora do escopo por ora (ver `docfy-mcp-planejamento.md` na raiz do
-container): CI/lint completo, transporte HTTP/SSE, `search_endpoints`
-(busca semântica), autenticação/spec atrás de login.
+Restart the MCP client — the `list_endpoints` and `get_endpoint` tools
+should appear in the available tools list.
