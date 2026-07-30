@@ -45,7 +45,10 @@ function looksLikeOpenApiDoc(body: string): boolean {
  * swallowed (a broken candidate just doesn't make it into the suggestion
  * list).
  */
-async function findAlternateSpecUrls(failedUrl: string, headers: Record<string, string> | undefined): Promise<string[]> {
+async function findAlternateSpecUrls(
+  failedUrl: string,
+  headers: Record<string, string> | undefined,
+): Promise<string[]> {
   let origin: string;
   try {
     origin = new URL(failedUrl).origin;
@@ -92,7 +95,7 @@ export async function loadSpec({ specPath, specUrl, headers }: LoadSpecOptions):
       const hint =
         alternates.length > 0
           ? ` Found what looks like an OpenAPI doc at: ${alternates.join(', ')} — did you mean one of these?`
-          : ' The OpenAPI JSON path isn\'t a fixed convention — it\'s whatever your project passed to SwaggerModule.setup(), check your main.ts.';
+          : " The OpenAPI JSON path isn't a fixed convention — it's whatever your project passed to SwaggerModule.setup(), check your main.ts.";
       throw new Error(`Failed to fetch spec from ${specUrl}: ${res.status} ${res.statusText}.${hint}`);
     }
     return normalizeDocument(await res.json());

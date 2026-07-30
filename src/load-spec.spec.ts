@@ -39,9 +39,9 @@ describe('loadSpec()', () => {
   });
 
   it('rejects a malformed --header entry', async () => {
-    await expect(
-      loadSpec({ specUrl: 'http://localhost:3000/api-json', headers: ['not-a-header'] }),
-    ).rejects.toThrow('Invalid --header "not-a-header"');
+    await expect(loadSpec({ specUrl: 'http://localhost:3000/api-json', headers: ['not-a-header'] })).rejects.toThrow(
+      'Invalid --header "not-a-header"',
+    );
   });
 
   it('on a 404, suggests a sibling path that looks like an OpenAPI doc', async () => {
@@ -66,9 +66,7 @@ describe('loadSpec()', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 404, statusText: 'Not Found' });
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    await expect(loadSpec({ specUrl: 'http://localhost:3000/docs-json' })).rejects.toThrow(
-      /SwaggerModule\.setup\(\)/,
-    );
+    await expect(loadSpec({ specUrl: 'http://localhost:3000/docs-json' })).rejects.toThrow(/SwaggerModule\.setup\(\)/);
   });
 
   it('does not probe alternates for non-404 failures', async () => {

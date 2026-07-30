@@ -34,9 +34,7 @@ export function createServer(document: DocumentModel): McpServer {
     },
     async ({ filter }) => {
       const endpoints = allEndpoints(document).filter((e) => !filter || matchesFilter(e, filter));
-      const lines = endpoints.map(
-        (e) => `${e.method} ${e.path}${e.summary ? ` — ${e.summary}` : ''}`,
-      );
+      const lines = endpoints.map((e) => `${e.method} ${e.path}${e.summary ? ` — ${e.summary}` : ''}`);
       return {
         content: [
           {
