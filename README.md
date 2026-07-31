@@ -15,6 +15,18 @@ but accepts any valid OpenAPI 3.0/3.1 spec.
 - **`get_endpoint`** — takes `method` + `path`, returns the full "Copy for
   AI" text block (Purpose, Request, Parameters, Validation, Success Response,
   Error Responses).
+- **`lint_spec`** — checks the loaded catalog for spec-quality issues:
+  missing summary/description, missing tags, missing 4xx/5xx responses,
+  undocumented response descriptions, duplicate operation IDs.
+- **`diff_specs`** — compares the loaded catalog against another spec
+  (`path` or `url`, e.g. a previous version from production or a git tag) and
+  reports added/removed endpoints and breaking vs. informational field
+  changes.
+- **`contract_test`** — fires a real request at every endpoint (or a
+  filtered subset) of an already-running server built from the loaded spec,
+  and validates each live response against its declared schema. Takes
+  `baseUrl`, optional `headers` (repeatable `"Name: value"` strings, e.g.
+  auth), and an optional `filter`.
 
 ## Usage
 

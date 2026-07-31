@@ -1,3 +1,5 @@
+import * as http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { describe, it, expect, beforeAll } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,7 +8,8 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { normalizeDocument, type DocumentModel } from 'docfy-core';
 import { createServer } from './server';
 
-const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), '__tests__', 'fixtures', 'spec-3.0.json');
+const fixturesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '__tests__', 'fixtures');
+const fixture = path.join(fixturesDir, 'spec-3.0.json');
 
 async function connectedClient(document: DocumentModel): Promise<Client> {
   const server = createServer(document);
@@ -26,7 +29,13 @@ describe('docfy-mcp server', () => {
   it('lists tools', async () => {
     const client = await connectedClient(document);
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual(['get_endpoint', 'list_endpoints']);
+    expect(tools.map((t) => t.name).sort()).toEqual([
+      'contract_test',
+      'diff_specs',
+      'get_endpoint',
+      'lint_spec',
+      'list_endpoints',
+    ]);
   });
 
   it('list_endpoints returns every endpoint', async () => {
@@ -67,5 +76,65 @@ describe('docfy-mcp server', () => {
       arguments: { method: 'GET', path: '/does-not-exist' },
     });
     expect(result.isError).toBe(true);
+  });
+
+  it('lint_spec reports the known quality issues in the fixture', async () => {
+    const client = await connectedClient(document);
+    const result = await client.callTool({ name: 'lint_spec', arguments: {} });
+    const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+    expect(text).toContain('[missing-description]');
+    expect(text).toContain('[no-error-response]');
+  });
+
+  it('diff_specs reports added and removed endpoints vs. a previous spec file', async () => {
+    const client = await connectedClient(document);
+    const previous = path.join(fixturesDir, 'spec-3.0-previous.json');
+    const result = await client.callTool({ name: 'diff_specs', arguments: { path: previous } });
+    const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+    expect(text).toContain('+ POST /users');
+    expect(text).toContain('- DELETE /users/{id}');
+  });
+
+  it('diff_specs requires either path or url', async () => {
+    const client = await connectedClient(document);
+    const result = await client.callTool({ name: 'diff_specs', arguments: {} });
+    expect(result.isError).toBe(true);
+  });
+
+  it('contract_test runs every endpoint against a live server and reports the outcome', async () => {
+    const server = http.createServer((req, res) => {
+      if (req.method === 'GET' && req.url === '/users') {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify([{ id: 'test', email: 'test@example.com' }]));
+        return;
+      }
+      if (req.method === 'POST' && req.url === '/users') {
+        res.statusCode = 201;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ id: 'test', email: 'test@example.com' }));
+        return;
+      }
+      res.statusCode = 404;
+      res.end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+
+    try {
+      const client = await connectedClient(document);
+      const result = await client.callTool({
+        name: 'contract_test',
+        arguments: { baseUrl: `http://127.0.0.1:${port}` },
+      });
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain('✓ GET /users');
+      expect(text).toContain('✓ POST /users');
+    } finally {
+      await new Promise<void>((resolve) => {
+        server.close(() => resolve());
+        server.closeAllConnections();
+      });
+    }
   });
 });

@@ -17,7 +17,7 @@ export interface LoadSpecOptions {
  */
 const COMMON_SPEC_PATHS = ['/api-json', '/docs-json', '/swagger-json', '/openapi.json', '/swagger.json'];
 
-function parseHeaders(headers: string[] | undefined): Record<string, string> | undefined {
+export function parseHeaders(headers: string[] | undefined): Record<string, string> | undefined {
   if (!headers || headers.length === 0) return undefined;
   const result: Record<string, string> = {};
   for (const entry of headers) {
