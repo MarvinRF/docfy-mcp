@@ -78,4 +78,40 @@ describe('loadSpec()', () => {
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  describe('allowedOrigins', () => {
+    it('rejects a specUrl outside the allowed origins before fetching', async () => {
+      const fetchMock = vi.fn();
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await expect(
+        loadSpec({
+          specUrl: 'http://169.254.169.254/latest/meta-data',
+          allowedOrigins: new Set(['http://localhost:3000']),
+        }),
+      ).rejects.toThrow("is not one of the primary spec's declared servers");
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('allows a specUrl matching one of the allowed origins', async () => {
+      const spec = { openapi: '3.0.3', info: { title: 't', version: '1' }, paths: {} };
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => spec });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await loadSpec({
+        specUrl: 'http://localhost:3000/api-json',
+        allowedOrigins: new Set(['http://localhost:3000']),
+      });
+      expect(fetchMock).toHaveBeenCalledWith('http://localhost:3000/api-json', { headers: undefined });
+    });
+
+    it('does not restrict anything when allowedOrigins is omitted', async () => {
+      const spec = { openapi: '3.0.3', info: { title: 't', version: '1' }, paths: {} };
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => spec });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await loadSpec({ specUrl: 'http://169.254.169.254/latest/meta-data' });
+      expect(fetchMock).toHaveBeenCalled();
+    });
+  });
 });

@@ -1,4 +1,5 @@
 import { normalizeDocument, type DocumentModel } from 'docfy-core';
+import { isOriginAllowed } from './allowed-origins.js';
 
 export interface LoadSpecOptions {
   /** Local filesystem path to a static OpenAPI JSON/YAML file. */
@@ -7,6 +8,14 @@ export interface LoadSpecOptions {
   specUrl?: string;
   /** Extra headers to send with `--url` requests, e.g. `["Authorization: Bearer xyz"]`. */
   headers?: string[];
+  /**
+   * When provided, `specUrl`'s origin must be in this set or the fetch is rejected
+   * before it happens. Computed by the caller (e.g. from the primary document's
+   * `servers`, via `buildAllowedOrigins()`) rather than recomputed here, so this
+   * module stays independent of `contract-test.ts`/`allowed-origins.ts`. Opt-in —
+   * omitted by default, matching the deliberate SSRF-guard-off default below.
+   */
+  allowedOrigins?: Set<string>;
 }
 
 /**
@@ -85,9 +94,19 @@ async function findAlternateSpecUrls(
  * is exactly what `--url http://localhost:3000/docs-json` (the primary use
  * case — a local NestJS dev server) is.
  */
-export async function loadSpec({ specPath, specUrl, headers }: LoadSpecOptions): Promise<DocumentModel> {
+export async function loadSpec({
+  specPath,
+  specUrl,
+  headers,
+  allowedOrigins,
+}: LoadSpecOptions): Promise<DocumentModel> {
   if (specPath) return normalizeDocument(specPath);
   if (specUrl) {
+    if (allowedOrigins && !isOriginAllowed(specUrl, allowedOrigins)) {
+      throw new Error(
+        `url "${specUrl}" is not one of the primary spec's declared servers — pass restrictToServers: false to override.`,
+      );
+    }
     const fetchHeaders = parseHeaders(headers);
     const res = await fetch(specUrl, { headers: fetchHeaders });
     if (!res.ok) {

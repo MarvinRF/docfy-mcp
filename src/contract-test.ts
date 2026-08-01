@@ -7,14 +7,21 @@ import {
   type JSONSchemaLike,
   type SchemaMismatch,
 } from 'docfy-core';
+import { buildAllowedOrigins, isOriginAllowed } from './allowed-origins.js';
 
 const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/** Same cap as nest-docfy's proxy-handler.ts — a live response is read into memory in full to validate against the schema, so an unbounded body is a real DoS surface. */
+const MAX_BODY_BYTES = 10 * 1024 * 1024; // 10MB
+/** Contract tests can legitimately be slower than load-spec.ts's 3s sibling-path probe (real business logic runs per request), but must still not hang forever. */
+const TIMEOUT_MS = 10_000;
 
 export type EndpointTestOutcome =
   | { kind: 'matched'; httpStatus: number; mismatches: SchemaMismatch[] }
   | { kind: 'undeclared-status'; httpStatus: number }
   | { kind: 'no-schema'; httpStatus: number }
   | { kind: 'unparseable-body'; httpStatus: number }
+  | { kind: 'response-too-large'; httpStatus: number }
   | { kind: 'request-failed'; message: string };
 
 export interface EndpointTestResult {
@@ -29,6 +36,30 @@ export interface RunContractTestsOptions {
   headers?: Record<string, string>;
   /** Case-insensitive substring match against path/tags — same filter semantics as `list_endpoints`. */
   filter?: string;
+  /** When true, `baseUrl` must match one of `document.servers`'s origins, or the run is rejected before firing any request. Opt-in — off by default so `--url http://localhost:3000` (the primary use case) keeps working with zero extra config. */
+  restrictToServers?: boolean;
+}
+
+/** Reads a response body up to `maxBytes`, aborting the underlying stream instead of buffering an unbounded body into memory. */
+async function readBodyCapped(response: Response, maxBytes: number): Promise<{ text: string; truncated: boolean }> {
+  const reader = response.body?.getReader();
+  if (!reader) return { text: await response.text(), truncated: false };
+
+  const decoder = new TextDecoder();
+  let text = '';
+  let bytes = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    bytes += value.byteLength;
+    if (bytes > maxBytes) {
+      await reader.cancel();
+      return { text: '', truncated: true };
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return { text, truncated: false };
 }
 
 /** Renders a schema-derived example value down to something usable as a raw path/query
@@ -83,7 +114,13 @@ async function testEndpoint(endpoint: Endpoint, options: RunContractTestsOptions
 
   let response: Response;
   try {
-    response = await fetch(requestUrl, { method: endpoint.method, headers, body });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      response = await fetch(requestUrl, { method: endpoint.method, headers, body, signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
   } catch (err) {
     return { ...base, outcome: { kind: 'request-failed', message: err instanceof Error ? err.message : String(err) } };
   }
@@ -92,7 +129,9 @@ async function testEndpoint(endpoint: Endpoint, options: RunContractTestsOptions
   if (!declared) return { ...base, outcome: { kind: 'undeclared-status', httpStatus: response.status } };
   if (!declared.schema) return { ...base, outcome: { kind: 'no-schema', httpStatus: response.status } };
 
-  const bodyText = await response.text();
+  const { text: bodyText, truncated } = await readBodyCapped(response, MAX_BODY_BYTES);
+  if (truncated) return { ...base, outcome: { kind: 'response-too-large', httpStatus: response.status } };
+
   let parsed: unknown;
   try {
     parsed = bodyText ? JSON.parse(bodyText) : undefined;
@@ -112,6 +151,15 @@ export async function runContractTests(
   document: DocumentModel,
   options: RunContractTestsOptions,
 ): Promise<EndpointTestResult[]> {
+  if (options.restrictToServers) {
+    const allowed = buildAllowedOrigins(document.servers);
+    if (!isOriginAllowed(options.baseUrl, allowed)) {
+      throw new Error(
+        `baseUrl "${options.baseUrl}" is not one of the spec's declared servers (${document.servers.join(', ') || 'none declared'}) — pass restrictToServers: false to override.`,
+      );
+    }
+  }
+
   const needle = options.filter?.toLowerCase();
   const endpoints = uniqueEndpoints(document).filter(
     (e) => !needle || e.path.toLowerCase().includes(needle) || e.tags.some((t) => t.toLowerCase().includes(needle)),

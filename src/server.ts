@@ -3,6 +3,7 @@ import { diffDocuments, lintSpec, operationToAiText, type DocumentModel, type En
 import { z } from 'zod';
 import { runContractTests } from './contract-test.js';
 import { loadSpec, parseHeaders } from './load-spec.js';
+import { buildAllowedOrigins } from './allowed-origins.js';
 
 function allEndpoints(document: DocumentModel): Endpoint[] {
   return document.tagGroups.flatMap((group) => group.endpoints);
@@ -109,15 +110,22 @@ export function createServer(document: DocumentModel): McpServer {
         path: z.string().optional().describe('Local filesystem path to the other OpenAPI spec.'),
         url: z.string().optional().describe('URL to fetch the other OpenAPI spec from.'),
         headers: z.array(z.string()).optional().describe('Extra headers for `url`, each formatted as "Name: value".'),
+        restrictToServers: z
+          .boolean()
+          .optional()
+          .describe(
+            "When true, `url` must match one of the primary spec's declared servers, or the fetch is rejected. Off by default.",
+          ),
       },
     },
-    async ({ path: specPath, url: specUrl, headers }) => {
+    async ({ path: specPath, url: specUrl, headers, restrictToServers }) => {
       if (!specPath && !specUrl) {
         return { isError: true, content: [{ type: 'text', text: 'Either `path` or `url` is required.' }] };
       }
       let otherDocument: DocumentModel;
       try {
-        otherDocument = await loadSpec({ specPath, specUrl, headers });
+        const allowedOrigins = restrictToServers ? buildAllowedOrigins(document.servers) : undefined;
+        otherDocument = await loadSpec({ specPath, specUrl, headers, allowedOrigins });
       } catch (err) {
         return { isError: true, content: [{ type: 'text', text: err instanceof Error ? err.message : String(err) }] };
       }
@@ -158,10 +166,26 @@ export function createServer(document: DocumentModel): McpServer {
           .string()
           .optional()
           .describe('Optional case-insensitive substring match against path or tags, to test a subset.'),
+        restrictToServers: z
+          .boolean()
+          .optional()
+          .describe(
+            "When true, `baseUrl` must match one of the spec's declared servers, or the run is rejected before firing any request. Off by default.",
+          ),
       },
     },
-    async ({ baseUrl, headers, filter }) => {
-      const results = await runContractTests(document, { baseUrl, headers: parseHeaders(headers), filter });
+    async ({ baseUrl, headers, filter, restrictToServers }) => {
+      let results;
+      try {
+        results = await runContractTests(document, {
+          baseUrl,
+          headers: parseHeaders(headers),
+          filter,
+          restrictToServers,
+        });
+      } catch (err) {
+        return { isError: true, content: [{ type: 'text', text: err instanceof Error ? err.message : String(err) }] };
+      }
       if (results.length === 0) return { content: [{ type: 'text', text: 'No endpoints matched.' }] };
 
       const lines = results.map((r) => {
@@ -178,6 +202,8 @@ export function createServer(document: DocumentModel): McpServer {
             return `~ ${label} — ${r.outcome.httpStatus} (no schema declared for this status)`;
           case 'unparseable-body':
             return `✖ ${label} — ${r.outcome.httpStatus}, body isn't valid JSON`;
+          case 'response-too-large':
+            return `✖ ${label} — ${r.outcome.httpStatus}, response body exceeds the size limit`;
           case 'request-failed':
             return `✖ ${label} — request failed: ${r.outcome.message}`;
         }
