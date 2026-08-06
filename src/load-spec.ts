@@ -1,5 +1,4 @@
-import { normalizeDocument, type DocumentModel } from 'docfy-core';
-import { isOriginAllowed } from './allowed-origins.js';
+import { isOriginAllowed, normalizeDocument, type DocumentModel } from 'docfy-core';
 
 export interface LoadSpecOptions {
   /** Local filesystem path to a static OpenAPI JSON/YAML file. */
@@ -11,8 +10,8 @@ export interface LoadSpecOptions {
   /**
    * When provided, `specUrl`'s origin must be in this set or the fetch is rejected
    * before it happens. Computed by the caller (e.g. from the primary document's
-   * `servers`, via `buildAllowedOrigins()`) rather than recomputed here, so this
-   * module stays independent of `contract-test.ts`/`allowed-origins.ts`. Opt-in —
+   * `servers`, via docfy-core's `buildAllowedOrigins()`) rather than recomputed
+   * here, so this module stays independent of `contract-test.ts`. Opt-in —
    * omitted by default, matching the deliberate SSRF-guard-off default below.
    */
   allowedOrigins?: Set<string>;

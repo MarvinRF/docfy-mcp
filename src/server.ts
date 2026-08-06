@@ -1,9 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { diffDocuments, lintSpec, operationToAiText, type DocumentModel, type Endpoint } from 'docfy-core';
+import {
+  buildAllowedOrigins,
+  diffDocuments,
+  lintSpec,
+  operationToAiText,
+  runContractTests,
+  type DocumentModel,
+  type Endpoint,
+} from 'docfy-core';
 import { z } from 'zod';
-import { runContractTests } from './contract-test.js';
 import { loadSpec, parseHeaders } from './load-spec.js';
-import { buildAllowedOrigins } from './allowed-origins.js';
 
 function allEndpoints(document: DocumentModel): Endpoint[] {
   return document.tagGroups.flatMap((group) => group.endpoints);
