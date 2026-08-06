@@ -1,6 +1,6 @@
 {
   "name": "docfy-mcp",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "description": "MCP server exposing a nestjs-docfy-documented OpenAPI catalog as tools for coding agents",
   "bin": {
