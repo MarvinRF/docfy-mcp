@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/MarvinRF/docfy-mcp/compare/v0.4.0...v0.4.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* **deps:** bump fast-uri, js-yaml and hono, 2 high + 1 moderate CVE; fix SECURITY.md formatting ([207ca32](https://github.com/MarvinRF/docfy-mcp/commit/207ca32fa0d249dd651062744538db460e47150c))
+
 # [0.4.0](https://github.com/MarvinRF/docfy-mcp/compare/v0.3.0...v0.4.0) (2026-08-06)
 
 
