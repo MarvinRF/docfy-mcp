@@ -1,3 +1,11 @@
+## [0.4.2](https://github.com/MarvinRF/docfy-mcp/compare/v0.4.1...v0.4.2) (2026-11-18)
+
+
+### Bug Fixes
+
+* **deps:** move to zod 4 for GHSA-mrhx-c7xc-m3w5 ([f9eeb75](https://github.com/MarvinRF/docfy-mcp/commit/f9eeb754d89da0a2d14312fbdc7b3c303665342a))
+* **deps:** refresh lockfile for MCP SDK, proxy-addr and hono advisories ([5ae7e7a](https://github.com/MarvinRF/docfy-mcp/commit/5ae7e7ad3a9add0404c14ed81a45b1ea49ea34a7))
+
 ## [0.4.1](https://github.com/MarvinRF/docfy-mcp/compare/v0.4.0...v0.4.1) (2026-08-07)
 
 
