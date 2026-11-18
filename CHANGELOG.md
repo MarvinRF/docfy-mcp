@@ -1,3 +1,25 @@
+# [0.5.0](https://github.com/MarvinRF/docfy-mcp/compare/v0.4.2...v0.5.0) (2026-11-18)
+
+
+### Bug Fixes
+
+* **deps:** require docfy-core ^0.7.0 ([3d41ac0](https://github.com/MarvinRF/docfy-mcp/commit/3d41ac01321026518800c84411dd0fac4f43c089))
+
+
+### Features
+
+* **contract-test:** expose allowWrites and the safe defaults in the MCP tool ([b4761e3](https://github.com/MarvinRF/docfy-mcp/commit/b4761e3ae098aafbe41758ea76f163cba0fafaa1))
+
+
+### BREAKING CHANGES
+
+* **contract-test:** contract_test no longer fires write methods unless
+allowWrites is true, and rejects a non-localhost baseUrl outside the
+spec's servers unless restrictToServers is false. Node.js 22.12+ is
+required.
+
+20 tests passing (run against the unreleased docfy-core build).
+
 ## [0.4.2](https://github.com/MarvinRF/docfy-mcp/compare/v0.4.1...v0.4.2) (2026-11-18)
 
 
