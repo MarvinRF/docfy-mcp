@@ -101,7 +101,14 @@ describe('docfy-mcp server', () => {
     expect(result.isError).toBe(true);
   });
 
-  it('contract_test runs every endpoint against a live server and reports the outcome', async () => {
+  it('contract_test rejects a non-localhost baseUrl outside the spec servers by default', async () => {
+    const client = await connectedClient(document);
+    const result = await client.callTool({ name: 'contract_test', arguments: { baseUrl: 'https://prod.example.com' } });
+    expect(result.isError).toBe(true);
+    expect((result.content as Array<{ text: string }>)[0].text).toContain("is not one of the spec's declared servers");
+  });
+
+  it('contract_test fires only safe methods unless allowWrites is set and reports the outcome', async () => {
     const server = http.createServer((req, res) => {
       if (req.method === 'GET' && req.url === '/users') {
         res.statusCode = 200;
@@ -123,13 +130,18 @@ describe('docfy-mcp server', () => {
 
     try {
       const client = await connectedClient(document);
-      const result = await client.callTool({
+      const textOf = (r: unknown) => (r as { content: Array<{ text: string }> }).content[0].text;
+
+      const safe = await client.callTool({ name: 'contract_test', arguments: { baseUrl: `http://127.0.0.1:${port}` } });
+      expect(textOf(safe)).toContain('✓ GET /users');
+      expect(textOf(safe)).toContain('- POST /users');
+      expect(textOf(safe)).toContain('skipped (write method');
+
+      const withWrites = await client.callTool({
         name: 'contract_test',
-        arguments: { baseUrl: `http://127.0.0.1:${port}` },
+        arguments: { baseUrl: `http://127.0.0.1:${port}`, allowWrites: true },
       });
-      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
-      expect(text).toContain('✓ GET /users');
-      expect(text).toContain('✓ POST /users');
+      expect(textOf(withWrites)).toContain('✓ POST /users');
     } finally {
       await new Promise<void>((resolve) => {
         server.close(() => resolve());

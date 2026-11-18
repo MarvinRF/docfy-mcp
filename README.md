@@ -26,7 +26,14 @@ but accepts any valid OpenAPI 3.0/3.1 spec.
   filtered subset) of an already-running server built from the loaded spec,
   and validates each live response against its declared schema. Takes
   `baseUrl`, optional `headers` (repeatable `"Name: value"` strings, e.g.
-  auth), and an optional `filter`.
+  auth), and an optional `filter`. **Safe by default** (since 0.5): only
+  `GET`/`HEAD`/`OPTIONS` are fired — write methods are reported as skipped
+  unless `allowWrites: true` — and a non-localhost `baseUrl` must be one of the
+  spec's `servers` (`restrictToServers: false` disables that check). An agent
+  reads untrusted text (spec descriptions, API responses); keep both switches
+  off unless you explicitly ask for writes against a disposable environment.
+
+Requires Node.js 22.12 or newer.
 
 ## Usage
 
